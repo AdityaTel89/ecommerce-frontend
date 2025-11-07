@@ -6,7 +6,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/app/context/AuthContext'
 
-const API_BASE_URL = 'http://localhost:3001'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
 export default function SignupPage() {
   const router = useRouter()
@@ -21,7 +21,6 @@ export default function SignupPage() {
   const [success, setSuccess] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
-  // ✅ Redirect if already logged in
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
       router.push('/')
