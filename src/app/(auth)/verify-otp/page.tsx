@@ -1,13 +1,14 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
-const API_BASE_URL = 'http://localhost:3001'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
-export default function VerifyOTPPage() {
+// ✅ Separate component that uses useSearchParams
+function VerifyOTPContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const email = searchParams.get('email') || ''
@@ -267,5 +268,21 @@ export default function VerifyOTPPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+// ✅ Main page wrapped in Suspense for Next.js 16
+export default function VerifyOTPPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-gray-300 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 font-poppins">Loading verification page...</p>
+        </div>
+      </div>
+    }>
+      <VerifyOTPContent />
+    </Suspense>
   )
 }
