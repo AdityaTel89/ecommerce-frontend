@@ -40,14 +40,16 @@ export default function LoginPage() {
         body: JSON.stringify({ email }),
       })
 
+      const data = await response.json()
+
       if (!response.ok) {
-        const data = await response.json()
         throw new Error(data.message || 'Failed to send OTP')
       }
 
       setSuccess(true)
       setTimeout(() => {
-        router.push(`/verify-otp?email=${encodeURIComponent(email)}`)
+        // Pass the OTP in the query string for autofill in verification
+        router.push(`/verify-otp?email=${encodeURIComponent(email)}${data.otp ? `&otp=${data.otp}` : ''}`)
       }, 1000)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send OTP. Please try again.')

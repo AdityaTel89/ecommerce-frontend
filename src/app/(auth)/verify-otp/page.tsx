@@ -12,13 +12,30 @@ function VerifyOTPContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const email = searchParams.get('email') || ''
+  const autoOtp = searchParams.get('otp') || '' // ✅ Get OTP from URL if present
 
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [timeLeft, setTimeLeft] = useState(300)
+  const [showOtpDisplay, setShowOtpDisplay] = useState(false)
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
+
+  // ✅ Auto-fill OTP when component mounts if OTP is in URL
+  useEffect(() => {
+    if (autoOtp && autoOtp.length === 6) {
+      const otpArray = autoOtp.split('')
+      setOtp(otpArray)
+      setShowOtpDisplay(true)
+
+      // Optional: Auto-verify after 1.5 seconds
+      setTimeout(() => {
+        handleAutoVerify(autoOtp)
+      }, 1500)
+    }
+  // eslint-disable-next-line
+  }, [autoOtp])
 
   useEffect(() => {
     if (timeLeft <= 0) return
@@ -44,17 +61,12 @@ function VerifyOTPContent() {
     }
   }
 
-  const handleVerifyOTP = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const otpCode = otp.join('')
+  // ✅ Auto-verify function with correct endpoint
+  const handleAutoVerify = async (otpCode: string) => {
+    if (otpCode.length !== 6) return
 
-    if (otpCode.length !== 6) {
-      setError('Please enter all 6 digits')
-      return
-    }
-
-    setError('')
     setIsLoading(true)
+    setError('')
 
     try {
       const verifyResponse = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
@@ -63,23 +75,17 @@ function VerifyOTPContent() {
         body: JSON.stringify({ email, otp: otpCode }),
       })
 
+      const data = await verifyResponse.json()
       if (!verifyResponse.ok) {
-        const data = await verifyResponse.json()
         throw new Error(data.message || 'Invalid OTP. Please try again.')
       }
-
-      const data = await verifyResponse.json()
 
       // ✅ Store JWT token in localStorage
       localStorage.setItem('token', data.token)
       localStorage.setItem('user', JSON.stringify(data.user))
-
       setSuccess(true)
 
-      // ✅ Wait a bit longer to allow AuthContext to update
-      // Then redirect to home
       setTimeout(() => {
-        // Dispatch storage event to notify AuthContext
         window.dispatchEvent(new Event('storage'))
         router.push('/')
       }, 500)
@@ -90,16 +96,34 @@ function VerifyOTPContent() {
     }
   }
 
+  const handleVerifyOTP = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const otpCode = otp.join('')
+    if (otpCode.length !== 6) {
+      setError('Please enter all 6 digits')
+      return
+    }
+    await handleAutoVerify(otpCode)
+  }
+
+  // Also correct resend-otp endpoint here.
   const handleResendOTP = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/send-otp`, {
+      const response = await fetch(`${API_BASE_URL}/auth/resend-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       })
 
       if (response.ok) {
-        setOtp(['', '', '', '', '', ''])
+        const data = await response.json()
+        // ✅ Auto-fill new OTP
+        if (data.otp) {
+          const otpArray = data.otp.split('')
+          setOtp(otpArray)
+          setShowOtpDisplay(true)
+          setTimeout(() => handleAutoVerify(data.otp), 1500)
+        }
         setTimeLeft(300)
         setError('')
         inputRefs.current[0]?.focus()
@@ -144,6 +168,24 @@ function VerifyOTPContent() {
               <span className="font-semibold text-[#253D4E]">{email}</span>
             </p>
           </div>
+
+          {/* ✅ Show OTP Display if auto-filled */}
+          {showOtpDisplay && autoOtp && (
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <p className="font-poppins text-sm font-semibold text-blue-800">
+                  Your OTP Code:
+                </p>
+                <span className="text-xs text-blue-600 font-medium">Auto-filled</span>
+              </div>
+              <p className="font-mono text-3xl font-bold text-blue-900 text-center tracking-widest">
+                {autoOtp}
+              </p>
+              <p className="text-xs text-blue-600 text-center mt-2">
+                Auto-verifying in a moment...
+              </p>
+            </div>
+          )}
 
           {success && (
             <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
