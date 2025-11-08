@@ -150,7 +150,7 @@ export default function Footer() {
                 className="bg-white border border-[#E9E9E9] rounded-r-md px-2 py-2 transition-colors flex items-center justify-center hover:bg-gray-100"
               >
                 <Image
-                  src="/assets/icons/sender.png"
+                  src="/assets/icons/Sender.png"
                   alt="sender"
                   width={14}
                   height={14}
